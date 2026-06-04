@@ -105,3 +105,23 @@ Available data via `useRoomState()`:
 **Acceptance**:
 - [ ] `cd backend && npm test && npx tsc --noEmit` passes
 - [ ] `cd frontend && npm test && npx tsc --noEmit` passes
+
+---
+
+## T006 Add invalid-state error handling to GamePage (FR-013)
+
+**File**: `frontend/src/pages/GamePage.tsx`
+
+**Description**: Add distinct error states for invalid navigation to the game page:
+
+- **Bad room code** (`room` is null, no valid room loaded): redirect to `"/"` immediately
+- **Missing participantId** (`participantId` is null/undefined in store): show an error card with "You need to rejoin the game" message and a link to the join page
+- **Participant removed** (participantId not found in `room.participants`): show "You have left the game" message with a "Return to Home" button
+
+The bad-room-code redirect is already partially handled by the existing `if (!room) navigate("/")` guard — this task ensures the remaining two states have dedicated UI.
+
+**Acceptance**:
+- [ ] Bad room code redirects to "/"
+- [ ] Missing participantId shows error card with rejoin link
+- [ ] Removed participant shows "You have left the game" with "Return to Home" button
+- [ ] All error states are visually distinct from normal game UI

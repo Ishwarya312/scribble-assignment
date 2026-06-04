@@ -6,7 +6,7 @@
 
 ## Summary
 
-Build the GamePage frontend with role-aware rendering and polling. The backend (startGame endpoint, drawer assignment, word selection, viewer-contextualized snapshots) was already implemented during the lobby feature (FR-001 through FR-010). New work is purely frontend: implement GamePage with "Loading game..." initial state, secret word display for the drawer, role indicator for all participants, drawer identity for guessers, and automatic ~2s polling with error resilience.
+Build the GamePage frontend with role-aware rendering, polling, and graceful invalid-state handling. The backend (startGame endpoint, drawer assignment, word selection, viewer-contextualized snapshots) was already implemented during the lobby feature (FR-001 through FR-010). New work is purely frontend: implement GamePage with "Loading game..." initial state, secret word display for the drawer, role indicator for all participants, drawer identity for guessers, automatic ~2s polling with error resilience, and distinct error states for invalid room code (redirect "/"), missing participantId (error card with rejoin), and participant-removed (leave message + "Return to Home" button).
 
 ## Technical Context
 
@@ -76,7 +76,8 @@ backend/
 frontend/
 └── src/
     ├── pages/
-    │   ├── GamePage.tsx        # **NEW WORK**: role-aware rendering + polling
+    │   ├── GamePage.tsx        # **COMPLETED**: role-aware rendering + polling + loading state
+    │   │                      # **REMAINING**: FR-013 error states (missing participantId card, participant-removed message)
     │   ├── LobbyPage.tsx       # No changes needed
     │   ├── CreateRoomPage.tsx  # No changes needed
     │   └── JoinRoomPage.tsx    # No changes needed
