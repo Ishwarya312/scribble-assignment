@@ -55,6 +55,7 @@ export function createRoom(playerName?: string) {
     code: generateUniqueCode(),
     status: "lobby",
     participants: [participant],
+    hostParticipantId: participant.id,
     createdAt: now(),
     updatedAt: now()
   };
@@ -103,6 +104,7 @@ export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSn
     code: room.code,
     status: room.status,
     participants: room.participants.map((participant) => ({ ...participant })),
+    hostParticipantId: room.hostParticipantId,
     availableWords: listWords(),
     roles: [...STARTER_ROLES]
   };

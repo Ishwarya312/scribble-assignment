@@ -8,8 +8,9 @@ export interface Participant {
 
 export interface RoomSnapshot {
   code: string;
-  status: "lobby";
+  status: "lobby" | "playing";
   participants: Participant[];
+  hostParticipantId: string;
   availableWords: string[];
   roles: ParticipantRole[];
 }
