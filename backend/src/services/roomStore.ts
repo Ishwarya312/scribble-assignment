@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Participant, Room, RoomSnapshot } from "../models/game.js";
+import type { Guess, Participant, Room, RoomSnapshot, Stroke } from "../models/game.js";
 import { STARTER_ROLES, STARTER_WORDS } from "../seed/starterData.js";
 
 const rooms = new Map<string, Room>();
@@ -56,6 +56,9 @@ export function createRoom(playerName?: string) {
     status: "lobby",
     participants: [participant],
     hostParticipantId: participant.id,
+    drawing: [],
+    guessHistory: [],
+    scores: {},
     createdAt: now(),
     updatedAt: now()
   };
@@ -155,12 +158,114 @@ export function startGame(code: string, participantId: string): StartGameResult 
   return { room: cloneRoom(room) };
 }
 
+type SubmitGuessResult =
+  | { error: string }
+  | { guess: Guess; score: number; guessHistory: Guess[] };
+
+export function submitGuess(code: string, participantId: string, word: string): SubmitGuessResult {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return { error: "Room not found" };
+  }
+
+  if (room.status !== "playing") {
+    return { error: "Game is not in progress" };
+  }
+
+  if (room.drawerParticipantId === participantId) {
+    return { error: "Drawer cannot submit guesses" };
+  }
+
+  const alreadyCorrect = room.guessHistory.find((g) => g.participantId === participantId && g.correct);
+  if (alreadyCorrect) {
+    return { error: "You have already guessed correctly" };
+  }
+
+  const trimmedWord = word.trim();
+  const correct = trimmedWord.toLowerCase() === (room.secretWord?.toLowerCase() ?? "");
+
+  const guess: Guess = {
+    participantId,
+    word: trimmedWord,
+    correct,
+    timestamp: now()
+  };
+
+  room.guessHistory.push(guess);
+
+  if (correct) {
+    room.scores[participantId] = (room.scores[participantId] ?? 0) + 100;
+  }
+
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  const score = room.scores[participantId] ?? 0;
+  return { guess, score, guessHistory: [...room.guessHistory] };
+}
+
+type DrawResult =
+  | { error: string }
+  | { drawing: Stroke[] };
+
+export function addStroke(code: string, participantId: string, stroke: Stroke): DrawResult {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return { error: "Room not found" };
+  }
+
+  if (room.status !== "playing") {
+    return { error: "Game is not in progress" };
+  }
+
+  if (room.drawerParticipantId !== participantId) {
+    return { error: "Only the drawer can draw" };
+  }
+
+  room.drawing.push(stroke);
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return { drawing: structuredClone(room.drawing) };
+}
+
+type ClearResult =
+  | { error: string }
+  | { drawing: Stroke[] };
+
+export function clearDrawing(code: string, participantId: string): ClearResult {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return { error: "Room not found" };
+  }
+
+  if (room.status !== "playing") {
+    return { error: "Game is not in progress" };
+  }
+
+  if (room.drawerParticipantId !== participantId) {
+    return { error: "Only the drawer can clear the canvas" };
+  }
+
+  room.drawing = [];
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return { drawing: [] };
+}
+
 export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
   const snapshot: RoomSnapshot = {
     code: room.code,
     status: room.status,
     participants: room.participants.map((participant) => ({ ...participant })),
     hostParticipantId: room.hostParticipantId,
+    drawing: structuredClone(room.drawing),
+    guessHistory: structuredClone(room.guessHistory),
+    scores: { ...room.scores },
     availableWords: listWords(),
     roles: [...STARTER_ROLES]
   };
