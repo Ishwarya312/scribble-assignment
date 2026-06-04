@@ -6,6 +6,24 @@ export interface Participant {
   joinedAt: string;
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface Stroke {
+  points: Point[];
+  color: string;
+  lineWidth: number;
+}
+
+export interface Guess {
+  participantId: string;
+  word: string;
+  correct: boolean;
+  timestamp: string;
+}
+
 export interface RoomSnapshot {
   code: string;
   status: "lobby" | "playing";
@@ -14,6 +32,9 @@ export interface RoomSnapshot {
   drawerParticipantId?: string;
   role?: ParticipantRole;
   secretWord?: string;
+  drawing: Stroke[];
+  guessHistory: Guess[];
+  scores: Record<string, number>;
   availableWords: string[];
   roles: ParticipantRole[];
 }
@@ -21,6 +42,20 @@ export interface RoomSnapshot {
 export interface RoomSessionResponse {
   participantId: string;
   room: RoomSnapshot;
+}
+
+interface GuessResponse {
+  correct: boolean;
+  score: number;
+  guessHistory: Guess[];
+}
+
+interface DrawResponse {
+  drawing: Stroke[];
+}
+
+interface ClearResponse {
+  drawing: Stroke[];
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
@@ -70,6 +105,24 @@ export const api = {
   },
   leaveRoom(code: string, participantId: string) {
     return request<{ room: RoomSnapshot }>(`/rooms/${encodeURIComponent(code)}/leave`, {
+      method: "POST",
+      body: JSON.stringify({ participantId })
+    });
+  },
+  submitGuess(code: string, participantId: string, word: string) {
+    return request<GuessResponse>(`/rooms/${encodeURIComponent(code)}/guess`, {
+      method: "POST",
+      body: JSON.stringify({ participantId, word })
+    });
+  },
+  addStroke(code: string, participantId: string, stroke: Stroke) {
+    return request<DrawResponse>(`/rooms/${encodeURIComponent(code)}/draw`, {
+      method: "POST",
+      body: JSON.stringify({ participantId, stroke })
+    });
+  },
+  clearCanvas(code: string, participantId: string) {
+    return request<ClearResponse>(`/rooms/${encodeURIComponent(code)}/clear`, {
       method: "POST",
       body: JSON.stringify({ participantId })
     });

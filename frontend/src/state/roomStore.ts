@@ -109,6 +109,28 @@ class RoomStore {
     this.setRoomSnapshot(response.room);
     return response;
   }
+
+  async submitGuess(word: string) {
+    const { room, participantId } = this.state;
+    if (!room || !participantId) {
+      throw new Error("No active room");
+    }
+
+    const response = await this.withLoading(() => api.submitGuess(room.code, participantId, word));
+
+    if (this.state.room) {
+      this.setRoomSnapshot({
+        ...this.state.room,
+        guessHistory: response.guessHistory,
+        scores: {
+          ...this.state.room.scores,
+          [participantId]: response.score
+        }
+      });
+    }
+
+    return response;
+  }
 }
 
 const RoomStoreContext = createContext<RoomStore | null>(null);
