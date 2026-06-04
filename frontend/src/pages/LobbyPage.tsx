@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
 import { PageHeader } from "../components/PageHeader";
 import { RoomCodeBadge } from "../components/RoomCodeBadge";
 import { useRoomState, useRoomStore } from "../state/roomStore";
 
+const POLL_INTERVAL = 2000;
+
 export function LobbyPage() {
   const navigate = useNavigate();
   const roomStore = useRoomStore();
   const { room, participantId, error, isLoading } = useRoomState();
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const viewerIsHost = room !== null && participantId !== null && room.hostParticipantId === participantId;
   const canStart = viewerIsHost && (room?.participants.length ?? 0) >= 2;
@@ -19,6 +22,31 @@ export function LobbyPage() {
       navigate("/", { replace: true });
     }
   }, [navigate, room]);
+
+  useEffect(() => {
+    if (!room) {
+      return;
+    }
+
+    async function poll() {
+      try {
+        await roomStore.fetchRoom();
+        setRefreshError(null);
+      } catch (caughtError) {
+        setRefreshError(caughtError instanceof Error ? caughtError.message : "Poll failed");
+      }
+    }
+
+    poll();
+    pollRef.current = setInterval(poll, POLL_INTERVAL);
+
+    return () => {
+      if (pollRef.current !== null) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [roomStore, room]);
 
   async function handleRefresh() {
     try {
