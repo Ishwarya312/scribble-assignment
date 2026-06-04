@@ -119,6 +119,7 @@
 - [ ] T026 [P] Add `startGame` action to room store in `frontend/src/state/roomStore.ts`
 - [ ] T027 Update `LobbyPage.tsx` to enable the Start Game button when `participants.length >= 2` and viewer is host; show contextual message "Waiting for players..." when disabled
 - [ ] T028 Update `LobbyPage.tsx` to hide the Start Game button entirely for non-host participants
+- [ ] T031 Update `LobbyPage.tsx` to detect room status transition from "lobby" to "playing" during polling and navigate all participants to `/game` automatically
 
 **Checkpoint**: Host can start the game, non-hosts cannot. The full lobby flow is complete.
 

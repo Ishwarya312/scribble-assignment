@@ -53,7 +53,7 @@ cd frontend && npm run dev    # Runs on http://localhost:5173
 
 1. Alice's tab has ≥2 participants and "Start Game" enabled
 2. Alice clicks "Start Game"
-3. **Expected**: Both tabs redirected to `/game`. Room status is now "playing".
+3. **Expected**: Alice's tab navigates to `/game` immediately. Bob's tab detects the status change via polling and navigates to `/game` within ~4 seconds. Room status is now "playing".
 
 ### Scenario 7: Non-host cannot start
 

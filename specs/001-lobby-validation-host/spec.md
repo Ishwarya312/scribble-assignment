@@ -74,6 +74,7 @@ Once at least 2 players are present in the lobby, the host can start the game by
 1. **Given** a room has 2 or more participants and the current user is the host, **When** they click "Start Game", **Then** the room status changes to "playing" and all participants are redirected to the game page.
 2. **Given** a room has only 1 participant (the host), **When** the host views the lobby, **Then** the "Start Game" button is disabled with an indication that more players are needed.
 3. **Given** a user who is not the host views the lobby, **When** they inspect the page, **Then** no "Start Game" button or game-start control is visible.
+4. **Given** a non-host participant is on the lobby page with polling active, **When** the host starts the game and the room status transitions to "playing" **Then** the lobby page's poll detects the status change and automatically navigates to the game page within ~4 seconds.
 
 ### Edge Cases
 
@@ -104,8 +105,9 @@ Once at least 2 players are present in the lobby, the host can start the game by
 - **FR-011**: The frontend MUST disable the "Start Game" button when there are fewer than 2 participants and show a contextual message (e.g. "Waiting for players...").
 - **FR-012**: The back end MUST provide a start-game endpoint (`POST /rooms/:code/start`) that transitions the room status from "lobby" to "playing" when preconditions are met.
 - **FR-013**: Starting the game MUST return an error if invoked by a non-host participant or when the room has fewer than 2 participants.
-- **FR-014**: Network errors during polling MUST NOT crash the lobby page; a non-blocking error indicator SHOULD be displayed and polling SHOULD continue.
-- **FR-015**: Room snapshots returned by the API MUST accurately reflect the current participant list including any participants who joined since the last fetch.
+- **FR-014**: The lobby frontend MUST detect room status changes (from "lobby" to "playing") during polling and navigate all participants to the game page automatically.
+- **FR-015**: Network errors during polling MUST NOT crash the lobby page; a non-blocking error indicator SHOULD be displayed and polling SHOULD continue.
+- **FR-016**: Room snapshots returned by the API MUST accurately reflect the current participant list including any participants who joined since the last fetch.
 
 ### Key Entities
 
@@ -144,7 +146,7 @@ Once at least 2 players are present in the lobby, the host can start the game by
 |---|---|---|
 | `frontend/src/services/api.ts` | Base URL has `/bug` typo. Three methods (createRoom, joinRoom, fetchRoom). | Fix base URL typo. Add `startGame(code, participantId)` method. |
 | `frontend/src/state/roomStore.ts` | `RoomState` has no host or game-start fields. `fetchRoom` is manual only. | Add `hostParticipantId` to state shape. Add `startGame` action. Add polling interval management (start/stop). |
-| `frontend/src/pages/LobbyPage.tsx` | "Start Game" button visible to everyone. Manual refresh only. | Gate "Start Game" visibility/disabled state by host + participant count. Replace manual refresh with auto-polling via `useEffect` + `setInterval`. Show loading/error states for polling. |
+| `frontend/src/pages/LobbyPage.tsx` | "Start Game" button visible to everyone. Manual refresh only. | Gate "Start Game" visibility/disabled state by host + participant count. Replace manual refresh with auto-polling via `useEffect` + `setInterval`. Show loading/error states for polling. Detect room status transition from "lobby" to "playing" during polling and navigate to `/game`. |
 | `frontend/src/pages/CreateRoomPage.tsx` | Accepts empty names. | Add frontend-side validation for empty/whitespace-only names before submitting. Show inline error. |
 | `frontend/src/pages/JoinRoomPage.tsx` | Accepts empty names. Hardcoded room code validation only (uppercase conversion). | Add frontend-side validation for empty/whitespace-only names. Validate room code is non-empty. Show inline error messages from API. |
 
