@@ -5,6 +5,7 @@ import { GuessForm } from "../components/GuessForm";
 import { ResultPanel } from "../components/ResultPanel";
 import { RoomCodeBadge } from "../components/RoomCodeBadge";
 import { Scoreboard } from "../components/Scoreboard";
+import { api } from "../services/api";
 import { useRoomState, useRoomStore } from "../state/roomStore";
 
 const POLL_INTERVAL = 2000;
@@ -52,6 +53,20 @@ export function GamePage() {
 
   if (!room) {
     return null;
+  }
+
+  const roomCode = room.code;
+
+  async function handleExit() {
+    if (!participantId) {
+      navigate("/lobby");
+      return;
+    }
+    try {
+      await api.leaveRoom(roomCode, participantId);
+    } catch {
+    }
+    navigate("/lobby");
   }
 
   if (initialLoad) {
@@ -132,7 +147,7 @@ export function GamePage() {
       </div>
 
       <div className="button-row">
-        <button className="button button--secondary" onClick={() => navigate("/lobby")}>
+        <button className="button button--secondary" onClick={handleExit}>
           Exit Game
         </button>
       </div>

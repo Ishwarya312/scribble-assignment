@@ -3,11 +3,12 @@ import {
   createRoomSchema,
   HttpError,
   joinRoomSchema,
+  leaveRoomSchema,
   roomCodeParamsSchema,
   roomViewerQuerySchema,
   startGameSchema
 } from "./schemas.js";
-import { createRoom, getRoom, joinRoom, startGame, toRoomSnapshot } from "../services/roomStore.js";
+import { createRoom, getRoom, joinRoom, removeParticipant, startGame, toRoomSnapshot } from "../services/roomStore.js";
 
 export function createRoomsRouter() {
   const router = Router();
@@ -57,6 +58,24 @@ export function createRoomsRouter() {
 
       response.json({
         room: toRoomSnapshot(result.room, participantId)
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:code/leave", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = leaveRoomSchema.parse(request.body);
+      const room = removeParticipant(code.toUpperCase(), participantId);
+
+      if (!room) {
+        throw new HttpError(404, "Room or participant not found");
+      }
+
+      response.json({
+        room: toRoomSnapshot(room, participantId)
       });
     } catch (error) {
       next(error);

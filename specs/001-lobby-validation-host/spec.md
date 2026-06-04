@@ -13,7 +13,7 @@
 ### Session 2026-06-04
 
 - Q: Should validation error messages be generic or specific per failure type? → A: Specific messages per failure type (e.g., "Room not found" for invalid code, "Name is required" for empty name).
-- Q: What happens to a host-less room when the host disconnects? → A: Room becomes host-less and stuck in its current state. No host transfer. The game can only be started if the host re-joins with the original participantId.
+- Q: What happens to a host-less room when the host disconnects? → A: When the host explicitly leaves via the leave endpoint (`POST /:code/leave`), host transfers to the next earliest-joined participant. No WebSocket disconnect detection — if the host closes the tab without calling leave, they remain in the participant list and the room keeps them as host.
 - Q: What should the lobby page show during initial data load? → A: Show the room code badge immediately, then populate participant list and controls when the snapshot arrives.
 
 ## User Scenarios & Testing
@@ -81,7 +81,7 @@ Once at least 2 players are present in the lobby, the host can start the game by
 - **Double-join**: A player who is already in the room (same participantId) attempts to join again via the join endpoint. The system should either reject with an error or silently return the existing room state.
 - **Room code format**: Codes are 4-character alphanumeric (uppercase letters + digits, excluding ambiguous chars like O, 0, I, 1). The join form should accept lowercase and convert to uppercase.
 - **Maximum participants**: No explicit limit is defined in the starter. The system should handle at least 10 concurrent participants without degradation.
-- **Host leaves and rejoins**: If the host is the only participant and refreshes (same participantId), they should still be host when the room is fetched. If they close their browser and a new participantId is generated, they join as a regular participant — the room becomes host-less and no one can start the game until the original host rejoins with their original participantId.
+- **Host leaves and rejoins**: If the host is the only participant and refreshes (same participantId), they should still be host when the room is fetched. If they explicitly leave via the leave endpoint and later rejoin with a new participantId, they join as a regular participant. The host role transfers to the first remaining participant when the host leaves.
 - **Rapid successive joins**: Multiple players joining simultaneously should all be visible in the participant list within two poll cycles.
 - **Network error during polling**: If a poll request fails (network error, server restart), the lobby should show a non-blocking error indicator and continue attempting to poll. It should not crash or redirect.
 - **Initial lobby loading state**: When the lobby page first loads, the room code badge is shown immediately (from the creation response or URL parameter). The participant list and controls are populated once the first room snapshot fetch completes. No full-page spinner is shown.
@@ -92,7 +92,7 @@ Once at least 2 players are present in the lobby, the host can start the game by
 
 ### Functional Requirements
 
-- **FR-001**: System MUST designate the room creator as the host and persist this association for the room's lifetime.
+- **FR-001**: System MUST designate the room creator as the host. If the host leaves via the leave endpoint, the host MUST transfer to the first remaining participant.
 - **FR-002**: System MUST reject room creation and joining with an empty or whitespace-only player name and display a specific error message (e.g. "Name is required" or "Name cannot be empty").
 - **FR-003**: System MUST trim leading and trailing whitespace from player names before storing or returning them.
 - **FR-004**: System MUST accept room codes case-insensitively on the join endpoint and normalize to uppercase.
@@ -113,7 +113,7 @@ Once at least 2 players are present in the lobby, the host can start the game by
 
 - **Room**: A game session identified by a unique 4-character code. Has a status (`lobby`, `playing`), a list of participants, a host, and timestamps. All data lives in-memory.
 - **Participant**: A player in a room. Identified by a UUID. Has a name (trimmed, non-empty), and a `joinedAt` timestamp.
-- **Host**: The participant who created the room. Tracked via a `hostParticipantId` field on the Room. The host role does not change during the room's lifetime.
+- **Host**: The participant who created the room. Tracked via a `hostParticipantId` field on the Room. The host role transfers to the next earliest-joined participant when the current host explicitly leaves.
 - **RoomSnapshot**: A read-only projection of a Room returned to API consumers. Includes `code`, `status`, `participants`, `hostParticipantId`, `availableWords`, and `roles`.
 
 ## Success Criteria
@@ -163,7 +163,7 @@ Once at least 2 players are present in the lobby, the host can start the game by
 
 ## Assumptions
 
-- **Host permanence**: The host role is assigned at room creation and does not transfer if the host leaves. If the host disconnects, the room becomes host-less and remains in its current state — no one can start the game until the host rejoins with the original participantId. Host transfer is out of scope.
+- **Host transfer on leave**: The host role is assigned at room creation. If the host leaves via the leave endpoint, the host transfers to the first remaining participant (the earliest joiner after the previous host). Closing the tab without calling leave does not trigger transfer — the host remains assigned.
 - **Polling start**: Polling begins immediately when the lobby page mounts (no initial delay). The interval fires every ~2 seconds.
 - **Error recovery**: If a poll request fails, the frontend logs a non-blocking error indicator and retries on the next interval. After 3 consecutive failures, a persistent message is shown but polling continues.
 - **Start-game button visibility**: Non-host participants see no start-game control at all (not just disabled). The host always sees the button but it is disabled when <2 players are present.

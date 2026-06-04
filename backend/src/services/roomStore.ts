@@ -91,6 +91,30 @@ export function getRoom(code: string) {
   return room ? cloneRoom(room) : null;
 }
 
+export function removeParticipant(code: string, participantId: string) {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return null;
+  }
+
+  const index = room.participants.findIndex((p) => p.id === participantId);
+
+  if (index === -1) {
+    return null;
+  }
+
+  room.participants.splice(index, 1);
+
+  if (room.hostParticipantId === participantId && room.participants.length > 0) {
+    room.hostParticipantId = room.participants[0].id;
+  }
+
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+  return cloneRoom(room);
+}
+
 export function saveRoom(room: Room) {
   room.updatedAt = now();
   rooms.set(room.code, cloneRoom(room));
