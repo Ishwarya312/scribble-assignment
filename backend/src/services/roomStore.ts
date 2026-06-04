@@ -97,10 +97,42 @@ export function saveRoom(room: Room) {
   return getRoom(room.code);
 }
 
-export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
-  void viewerParticipantId;
+type StartGameResult =
+  | { error: string }
+  | { room: Room };
 
-  return {
+export function startGame(code: string, participantId: string): StartGameResult {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return { error: "Room not found" };
+  }
+
+  if (room.status !== "lobby") {
+    return { error: "Game already started" };
+  }
+
+  if (room.hostParticipantId !== participantId) {
+    return { error: "Only the host can start the game" };
+  }
+
+  if (room.participants.length < 2) {
+    return { error: "Need at least 2 players" };
+  }
+
+  room.status = "playing";
+  room.drawerParticipantId = room.participants[0].id;
+
+  const codeSum = room.code.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  room.secretWord = STARTER_WORDS[codeSum % STARTER_WORDS.length];
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return { room: cloneRoom(room) };
+}
+
+export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
+  const snapshot: RoomSnapshot = {
     code: room.code,
     status: room.status,
     participants: room.participants.map((participant) => ({ ...participant })),
@@ -108,4 +140,18 @@ export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSn
     availableWords: listWords(),
     roles: [...STARTER_ROLES]
   };
+
+  if (room.status === "playing" && room.drawerParticipantId) {
+    snapshot.drawerParticipantId = room.drawerParticipantId;
+
+    if (viewerParticipantId) {
+      snapshot.role = viewerParticipantId === room.drawerParticipantId ? "drawer" : "guesser";
+    }
+
+    if (viewerParticipantId === room.drawerParticipantId && room.secretWord) {
+      snapshot.secretWord = room.secretWord;
+    }
+  }
+
+  return snapshot;
 }
