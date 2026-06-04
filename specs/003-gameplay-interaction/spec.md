@@ -40,7 +40,7 @@ A guesser sees a guess input form on the game page. They type a word and submit 
 2. **Given** the game has started and the viewer is a guesser, **When** they submit a guess that does not match the secret word, **Then** they receive feedback that the guess is incorrect and their score stays the same.
 3. **Given** the game has started and the viewer is a guesser, **When** they submit an empty or whitespace-only guess, **Then** the submission is rejected with an error message and no points are awarded.
 4. **Given** the game has started and the viewer is a guesser who has already guessed correctly, **When** they submit another guess, **Then** the submission is rejected with a message that they have already answered correctly.
-5. **Given** a game is in progress with multiple guessers, **When** all guessers have submitted the correct word, **Then** the round automatically ends (status transitions to "finished") without requiring the host to click "End Round".
+5. **Given** a game is in progress, **When** a guesser submits a correct guess, **Then** the round automatically ends (status transitions to "finished") immediately — remaining guessers cannot submit further guesses.
 
 ---
 
@@ -90,7 +90,7 @@ All participants can see the current scores for every player. Scores update in r
 - **Drawing while another guesser submits a guess**: These operations are independent. Drawing is not interrupted by guess submission.
 - **Network error during drawing sync**: If a drawing stroke fails to sync, the drawer's local canvas still shows the stroke. The stroke will be re-attempted on the next poll cycle or the drawer can redraw.
 - **Polling failure on game page**: If poll requests fail, the game page shows a non-blocking error indicator and continues polling. Drawing and guess submission still work (they have their own API calls independent of polling).
-- **Round auto-ends when all guessers guess correctly**: When every non-drawer participant has submitted a correct guess, the room status automatically transitions from `"playing"` to `"finished"`. The host can still end the round early via the End Round button. A single correct guess does NOT end the round — only when all guessers have answered correctly.
+- **Any correct guess auto-ends the round**: The moment any guesser submits the correct word, the room status immediately transitions from `"playing"` to `"finished"`. Remaining guessers cannot submit further guesses (the guess endpoint rejects them with "not in progress"). The host's End Round button is still available for early manual ending if needed.
 
 ## Requirements
 
@@ -178,5 +178,5 @@ All participants can see the current scores for every player. Scores update in r
 - **Already-correct guesser**: A participant who has submitted the correct word is considered "done" and cannot submit further guesses. They can still view the drawing, guess history, and scores.
 - **Drawer guess rejection**: The drawer role is prevented from submitting guesses both by UI (no guess form) and by backend validation.
 - **Polling behavior**: Game page polling follows the same pattern as lobby polling (~2s interval, stops on unmount, error resilience with non-blocking indicator).
-- **Auto-end on all-correct**: The round automatically ends (transitions to `"finished"`) when every non-drawer participant has submitted a correct guess. This is a gameplay-interaction concern because it directly follows from guess processing. The host can still end the round early via the End Round button (feature 004).
+- **Auto-end on correct guess**: The round automatically ends (transitions to `"finished"`) as soon as any guesser submits a correct guess. The remaining guessers receive an error if they attempt to guess. The host's End Round button (feature 004) serves as an early manual override before any correct guess is made.
 - **Single round**: All gameplay occurs within a single round. There is no round advancement, drawer rotation, or game-end mechanism in this feature. Those are separate features.

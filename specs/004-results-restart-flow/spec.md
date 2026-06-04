@@ -65,7 +65,7 @@ When the host ends the round or restarts the game, non-host participants see the
 - **Restart when in "playing" state**: Restart is not allowed while the game is in progress. The round must be ended first.
 - **Participant joins during results**: A participant who joins (or re-joins via fetch) during the results view sees the same result data as everyone else (correct word, scores, history).
 - **Participant joins after restart**: A participant who joins after restart sees the lobby with the existing participants and scores at 0.
-- **Round auto-ends when all guessers guess correctly**: When every non-drawer participant has submitted a correct guess, the room automatically transitions from `"playing"` to `"finished"` (triggered in `submitGuess`). The host can still end the round early via "End Round". A single correct guess does NOT auto-end — only the last guesser to get it right triggers the transition. The results view shows all guessers with 100 points.
+- **Any correct guess auto-ends the round**: As soon as any guesser submits the correct word, the room transitions from `"playing"` to `"finished"` (triggered in `submitGuess`). This means only one guesser can score per round. The host can still end the round early via the "End Round" button before any correct guess occurs. The results view shows the correct word, final scores, and guess history.
 - **No one guessed correctly**: The results view shows the correct word and all guessers with 0 points. The guess history shows all incorrect attempts.
 - **Host polls during results**: The host's page also polls and transitions seamlessly — no special host behavior needed beyond the ability to trigger end/restart.
 - **End-round or restart API call fails**: Show an inline non-blocking error message near the action button. The button remains clickable so the host can retry immediately. No auto-retry or cooldown.
@@ -152,7 +152,7 @@ When the host ends the round or restarts the game, non-host participants see the
 
 ## Assumptions
 
-- **Round end trigger**: The round ends automatically when every non-drawer participant has guessed correctly (triggered in `submitGuess`). The host can also end the round early at any time via the "End Round" button. There is no timer-based end condition.
+- **Round end trigger**: The round ends automatically as soon as any guesser submits a correct guess (triggered in `submitGuess`). The host can also end the round early at any time via the "End Round" button (e.g., if the round is stalling). There is no timer-based end condition.
 - **Result view**: The result information is rendered in-page within GamePage when `snapshot.status === "finished"`. No separate route is used.
 - **Non-host experience during results**: Non-host participants see a results view with all the data but no action controls (no "End Round", no "Restart"). They see a message like "Waiting for host..." for the restart action.
 - **Restart returns to lobby**: After restart, participants see the same lobby page they saw before the game started. All lobby features (polling, participant list, host controls) work as before.

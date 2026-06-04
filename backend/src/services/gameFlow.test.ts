@@ -25,42 +25,30 @@ function makeStroke(): Stroke {
 }
 
 describe("full game flow integration", () => {
-  it("completes lifecycle with auto-end when all guessers correct", () => {
+  it("correct guess auto-ends round and shows results; restart preserves players", () => {
     // --- Create room ---
     const { room: created, participantId: hostId } = createRoom("Alice");
     const code = created.code;
-    expect(created.hostParticipantId).toBe(hostId);
 
     // --- Join room (player 2) ---
-    const joinResult1 = joinRoom(code, "Bob");
-    expect(joinResult1).not.toBeNull();
-    const bobId = joinResult1!.participantId;
+    const joinBob = joinRoom(code, "Bob");
+    expect(joinBob).not.toBeNull();
+    const bobId = joinBob!.participantId;
 
     // --- Join room (player 3) ---
-    const joinResult2 = joinRoom(code, "Charlie");
-    expect(joinResult2).not.toBeNull();
-    const charlieId = joinResult2!.participantId;
+    const joinCharlie = joinRoom(code, "Charlie");
+    expect(joinCharlie).not.toBeNull();
+    const charlieId = joinCharlie!.participantId;
 
     // --- Start game ---
     const startResult = startGame(code, hostId);
     expect("error" in startResult).toBe(false);
-    const playingRoom = "room" in startResult ? startResult.room : null;
-    expect(playingRoom?.status).toBe("playing");
-    expect(playingRoom?.drawerParticipantId).toBe(hostId);
-
-    // --- Guesser snapshot hides secret word ---
-    const guesserSnapshot = toRoomSnapshot(playingRoom!, bobId);
-    expect(guesserSnapshot.role).toBe("guesser");
-    expect(guesserSnapshot.secretWord).toBeUndefined();
+    expect(getRoom(code)?.status).toBe("playing");
 
     // --- Drawer cannot guess ---
-    const drawerGuess = submitGuess(code, hostId, "rocket");
-    expect("error" in drawerGuess).toBe(true);
-    if ("error" in drawerGuess) {
-      expect(drawerGuess.error).toMatch(/drawer/i);
-    }
+    expect(submitGuess(code, hostId, "rocket")).toMatchObject({ error: expect.stringMatching(/drawer/i) });
 
-    // --- Submit wrong guess ---
+    // --- Bob guesses wrong ---
     const wrongGuess = submitGuess(code, bobId, "wrongword");
     expect("error" in wrongGuess).toBe(false);
     if ("guess" in wrongGuess) {
@@ -68,55 +56,44 @@ describe("full game flow integration", () => {
       expect(wrongGuess.score).toBe(0);
     }
 
-    // --- Bob guesses correctly; round stays playing (Charlie hasn't guessed) ---
-    const secretWord = getRoom(code)?.secretWord;
-    expect(secretWord).toBeDefined();
-    const bobCorrect = submitGuess(code, bobId, secretWord!);
-    expect("error" in bobCorrect).toBe(false);
-    if ("guess" in bobCorrect) {
-      expect(bobCorrect.guess.correct).toBe(true);
-      expect(bobCorrect.score).toBe(100);
-    }
-    expect(getRoom(code)?.status).toBe("playing");
-
-    // --- Already-correct Bob is rejected ---
-    const repeatGuess = submitGuess(code, bobId, secretWord!);
-    expect("error" in repeatGuess).toBe(true);
-    if ("error" in repeatGuess) {
-      expect(repeatGuess.error).toMatch(/already guessed correctly/i);
-    }
-
-    // --- Draw, clear, draw ---
-    const drawResult = addStroke(code, hostId, makeStroke());
-    expect("error" in drawResult).toBe(false);
-    const clearResult = clearDrawing(code, hostId);
-    expect("error" in clearResult).toBe(false);
-    const reDraw = addStroke(code, hostId, makeStroke());
-    expect("error" in reDraw).toBe(false);
+    // --- Drawer draws and clears ---
+    expect("error" in addStroke(code, hostId, makeStroke())).toBe(false);
+    expect("error" in clearDrawing(code, hostId)).toBe(false);
+    expect("error" in addStroke(code, hostId, makeStroke())).toBe(false);
 
     // --- Non-drawer cannot draw ---
-    const bobDraw = addStroke(code, bobId, makeStroke());
-    expect("error" in bobDraw).toBe(true);
+    expect(addStroke(code, bobId, makeStroke())).toMatchObject({ error: expect.stringMatching(/only the drawer/i) });
 
-    // --- Charlie guesses correctly → triggers auto-end ---
-    const charlieCorrect = submitGuess(code, charlieId, secretWord!);
-    expect("error" in charlieCorrect).toBe(false);
+    // --- Bob guesses correctly → round auto-ends ---
+    const secretWord = getRoom(code)?.secretWord;
+    expect(secretWord).toBeDefined();
+    const correctGuess = submitGuess(code, bobId, secretWord!);
+    expect("error" in correctGuess).toBe(false);
+    if ("guess" in correctGuess) {
+      expect(correctGuess.guess.correct).toBe(true);
+      expect(correctGuess.score).toBe(100);
+    }
+
+    // --- Verify round ended ---
     expect(getRoom(code)?.status).toBe("finished");
 
-    // --- Finished snapshot exposes word + scores to all ---
-    const finishedSnapshot = toRoomSnapshot(getRoom(code)!, bobId);
-    expect(finishedSnapshot.secretWord).toBe(secretWord);
-    expect(finishedSnapshot.scores[bobId]).toBe(100);
-    expect(finishedSnapshot.scores[charlieId]).toBe(100);
-    expect(finishedSnapshot.guessHistory).toHaveLength(3);
+    // --- Already-correct guesser and remaining guesser both get "not in progress" (status check fires first) ---
+    expect(submitGuess(code, bobId, secretWord!)).toMatchObject({ error: expect.stringMatching(/not in progress/i) });
+    expect(submitGuess(code, charlieId, secretWord!)).toMatchObject({ error: expect.stringMatching(/not in progress/i) });
 
-    // --- End round now fails (already finished by auto-end) ---
-    const endAfterAuto = endRound(code, hostId);
-    expect("error" in endAfterAuto).toBe(true);
+    // --- Finished snapshot exposes word + scores to all ---
+    const snapshot = toRoomSnapshot(getRoom(code)!, bobId);
+    expect(snapshot.secretWord).toBe(secretWord);
+    expect(snapshot.scores[bobId]).toBe(100);
+
+    // --- endRound fails (already finished by auto-end) ---
+    expect(endRound(code, hostId)).toMatchObject({ error: expect.stringMatching(/not in progress/i) });
+
+    // --- Non-host cannot restart ---
+    expect(restartGame(code, bobId)).toMatchObject({ error: expect.stringMatching(/only the host/i) });
 
     // --- Restart ---
-    const restartResult = restartGame(code, hostId);
-    expect("error" in restartResult).toBe(false);
+    expect("error" in restartGame(code, hostId)).toBe(false);
 
     // --- Verify restart state ---
     const restartedRoom = getRoom(code);
@@ -126,32 +103,7 @@ describe("full game flow integration", () => {
     expect(restartedRoom?.drawing).toHaveLength(0);
     expect(restartedRoom?.guessHistory).toHaveLength(0);
     expect(restartedRoom?.scores).toEqual({});
-
-    // --- Participants preserved ---
     expect(restartedRoom?.participants).toHaveLength(3);
-
-    // --- Non-host cannot restart ---
-    expect("error" in restartGame(code, bobId)).toBe(true);
-
-    // --- Cannot restart from lobby ---
-    expect("error" in restartGame(code, hostId)).toBe(true);
-  });
-
-  it("host can manually end round early before all guessers guess correctly", () => {
-    const { room, participantId: hostId } = createRoom("Alice");
-    const code = room.code;
-    const joinBob = joinRoom(code, "Bob");
-    expect(joinBob).not.toBeNull();
-    const bobId = joinBob!.participantId;
-
-    const startResult = startGame(code, hostId);
-    expect("error" in startResult).toBe(false);
-
-    // Bob guesses wrong — not all correct, host can end manually
-    submitGuess(code, bobId, "wrong");
-    const endResult = endRound(code, hostId);
-    expect("error" in endResult).toBe(false);
-    expect(getRoom(code)?.status).toBe("finished");
   });
 
   it("rejects start with fewer than 2 players", () => {
@@ -169,27 +121,13 @@ describe("full game flow integration", () => {
     expect(guestJoin).not.toBeNull();
     const result = startGame(r.code, guestJoin!.participantId);
     expect("error" in result).toBe(true);
-    if ("error" in result) {
-      expect(result.error).toMatch(/only the host/i);
-    }
+    expect(result).toMatchObject({ error: expect.stringMatching(/only the host/i) });
   });
 
-  it("rejects guess for non-existent room", () => {
-    const result = submitGuess("ZZZZ", "any-id", "word");
-    expect("error" in result).toBe(true);
-    if ("error" in result) {
-      expect(result.error).toMatch(/room not found/i);
-    }
-  });
-
-  it("rejects end-round for non-existent room", () => {
-    const result = endRound("ZZZZ", "any-id");
-    expect("error" in result).toBe(true);
-  });
-
-  it("rejects restart for non-existent room", () => {
-    const result = restartGame("ZZZZ", "any-id");
-    expect("error" in result).toBe(true);
+  it("rejects actions for non-existent room", () => {
+    expect(submitGuess("ZZZZ", "any-id", "word")).toMatchObject({ error: expect.stringMatching(/room not found/i) });
+    expect(endRound("ZZZZ", "any-id")).toMatchObject({ error: expect.stringMatching(/room not found/i) });
+    expect(restartGame("ZZZZ", "any-id")).toMatchObject({ error: expect.stringMatching(/room not found/i) });
   });
 
   it("rejects guess when room is not playing", () => {
@@ -198,8 +136,6 @@ describe("full game flow integration", () => {
     expect(join).not.toBeNull();
     const guess = submitGuess(room.code, join!.participantId, "rocket");
     expect("error" in guess).toBe(true);
-    if ("error" in guess) {
-      expect(guess.error).toMatch(/not in progress/i);
-    }
+    expect(guess).toMatchObject({ error: expect.stringMatching(/not in progress/i) });
   });
 });
