@@ -8,8 +8,11 @@ import { useRoomState, useRoomStore } from "../state/roomStore";
 export function LobbyPage() {
   const navigate = useNavigate();
   const roomStore = useRoomStore();
-  const { room, error, isLoading } = useRoomState();
+  const { room, participantId, error, isLoading } = useRoomState();
   const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  const viewerIsHost = room !== null && participantId !== null && room.hostParticipantId === participantId;
+  const canStart = viewerIsHost && (room?.participants.length ?? 0) >= 2;
 
   useEffect(() => {
     if (!room) {
@@ -69,9 +72,11 @@ export function LobbyPage() {
         <button className="button button--secondary" disabled={isLoading} onClick={handleRefresh}>
           {isLoading ? "Refreshing..." : "Refresh Room"}
         </button>
-        <button className="button button--primary" onClick={() => navigate("/game")}>
-          Start Game
-        </button>
+        {viewerIsHost ? (
+          <button className="button button--primary" disabled={!canStart}>
+            {canStart ? "Start Game" : "Need at least 2 players"}
+          </button>
+        ) : null}
       </div>
     </section>
   );
