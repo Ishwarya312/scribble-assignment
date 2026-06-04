@@ -42,5 +42,5 @@ You are working on a monolithic repository for a multiplayer drawing game ("Scri
 - When creating or editing files, ensure consistency with the existing directory structure detailed above.
 
 <!-- SPECKIT START -->
-Active plan: `specs/001-lobby-validation-host/plan.md`
+Active plan: `specs/002-game-start-role-assign/plan.md`
 <!-- SPECKIT END -->
