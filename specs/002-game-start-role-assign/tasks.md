@@ -4,124 +4,98 @@
 
 **Prerequisites**: plan.md, research.md, data-model.md, contracts/
 
-**Tests**: Not requested in feature specification — test tasks omitted per task generation rules.
+**Tests**: Not requested in feature specification — test tasks omitted.
 
-**Organization**: Tasks are grouped by implementation order, one file change per task.
-
-## Context
-
-The backend for this feature (FR-001 through FR-010) was already implemented during the lobby feature. All tasks below are **frontend-only**, targeting `GamePage.tsx`.
-
-Available data via `useRoomState()`:
-- `room.drawerParticipantId` — UUID of the drawer (present when status is "playing")
-- `room.role` — `"drawer"` or `"guesser"` for the current viewer (present when status is "playing")
-- `room.secretWord` — the secret word (present only when viewer is the drawer)
-- `room.participants` — can find the drawer's name by matching `drawerParticipantId`
+**Organization**: Tasks are grouped by user story. Completed tasks are marked with `[x]`.
 
 ---
 
-## T001 Add "Loading game..." initial state to GamePage
+## Phase 1: Setup — No changes needed
+
+Backend (FR-001 through FR-010) fully implemented during lobby feature. No setup or foundational steps required.
+
+---
+
+## Phase 2: Foundational — No changes needed
+
+All backend logic (`startGame`, `toRoomSnapshot`, routes) already complete. The store (`roomStore.ts`) and API service (`api.ts`) already propagate all needed snapshot fields (`drawerParticipantId`, `role`, `secretWord`).
+
+---
+
+## Phase 3: User Story 1 — Host Starts the Game (Priority: P1) ✅ COMPLETE
+
+**Goal**: Host clicks "Start Game", drawer assigned, word selected, both tabs redirect to game page.
+
+**Independent Test**: Open two tabs in same room. Host starts game. Both redirect to `/game`. Host sees secret word. Guesser does not.
+
+- [x] T001 [US1] Add "Loading game..." initial state to `frontend/src/pages/GamePage.tsx`
+- [x] T002 [US1] Add game-page polling to `frontend/src/pages/GamePage.tsx`
+
+---
+
+## Phase 4: User Story 2 — Role Visibility (Priority: P2) ✅ COMPLETE
+
+**Goal**: All participants see their role ("drawer"/"guesser") and drawer identity. Drawer sees secret word; guessers do not.
+
+**Independent Test**: Game with 3 participants. Drawer's page shows role "drawer" + secret word. Guessers' pages show role "guesser" + drawer name, no secret word.
+
+- [x] T003 [US2] Add role-aware rendering to `frontend/src/pages/GamePage.tsx`
+- [x] T004 [US2] Hide GuessForm for drawer in `frontend/src/pages/GamePage.tsx`
+
+---
+
+## Phase 5: User Story 3 — Game Page Polling (Priority: P2) ✅ COMPLETE
+
+**Goal**: Game page polls `GET /rooms/:code?participantId=` every ~2s, stops on unmount, handles errors gracefully.
+
+**Independent Test**: Open two tabs, start game from Tab A. Tab B's poll catches status change within ~4s. Navigate away — polling stops.
+
+- [x] T005 [US3] Verify polling lifecycle and run tests
+
+---
+
+## Phase 6: Edge Case Error Handling — FR-013 (Remaining Work)
+
+**Goal**: Handle three invalid-state scenarios on the game page with distinct user-visible treatment.
+
+**Independent Test**:
+1. Navigate to `/game/INVALID` → redirected to `/`
+2. Navigate to `/game/VALID` with no `participantId` in store → error card with "Rejoin" link
+3. Use a `participantId` not in the room's participant list → "You have left the game" + "Return to Home" button
+
+- [ ] T006 [FR-013] Add error states for missing participantId and removed participant in `frontend/src/pages/GamePage.tsx`
+
+### T006 — Detailed Requirements
 
 **File**: `frontend/src/pages/GamePage.tsx`
 
-**Description**: Before the first poll completes, show a generic loading state instead of the full game layout. Once `room.status === "playing"`, render the game content. This prevents showing stale or incorrect content before the role-contextualized snapshot arrives.
-
-**Acceptance**:
-- [ ] When GamePage mounts with `room.status === "playing"`, shows "Loading game..." indicator
-- [ ] After first poll returns, the loading state is replaced with role-specific content
-- [ ] The "Loading game..." indicator is centered, visually distinct, and non-blocking
-
-**Note**: In practice, since GamePage is only reached after the lobby redirects on status change, the first render will already have `status: "playing"` and `role` from the redirecting poll. The loading state covers the edge case where the user navigates directly to `/game` before the store is populated.
+**Checks**:
+- [ ] Bad room code (`room` is null): Already handled via `if (!room) navigate("/")` — verify guard is in place
+- [ ] Missing `participantId` (`participantId` is null in store): Show an error card with "You need to rejoin the game" message and a link/button to the join page
+- [ ] Participant not in room list (`participantId` exists but not found in `room.participants`): Show "You have left the game" message with a "Return to Home" button
+- [ ] All error states are visually distinct from normal game UI (use `panel` layout, centered content, appropriate colors)
+- [ ] Error states do not trigger polling (polling effect should short-circuit when showing an error state)
 
 ---
 
-## T002 Add game-page polling to GamePage
+## Dependencies & Execution Order
 
-**File**: `frontend/src/pages/GamePage.tsx`
+```
+Phase 1 (Setup) — nothing needed
+  └─ Phase 2 (Foundational) — nothing needed
+       ├─ US1 (P1): ✅ Complete — T001, T002
+       ├─ US2 (P2): ✅ Complete — T003, T004
+       └─ US3 (P2): ✅ Complete — T005
+       └─ FR-013: Remaining — T006
+```
 
-**Description**: Add automatic polling of the room snapshot every ~2 seconds while the game page is active, following the same pattern as LobbyPage.
-
-**Acceptance**:
-- [ ] Polling starts when GamePage mounts
-- [ ] `fetchRoom` is called every ~2000ms via `setInterval`
-- [ ] Polling errors are handled non-blockingly (error state displayed, polling continues)
-- [ ] Polling stops when GamePage unmounts (`clearInterval` in effect cleanup)
-- [ ] Loading state cleared on first successful poll
-
----
-
-## T003 Add role-aware rendering to GamePage
-
-**File**: `frontend/src/pages/GamePage.tsx`
-
-**Description**: Render role-specific content based on `room.role`:
-
-- **Drawer view** (`role === "drawer"`):
-  - Show "You are drawing!" as the title
-  - Show the secret word prominently (e.g., in a styled word display card)
-  - Show "Draw the word for others to guess" helper text
-  - Show "Waiting for guessers..." instead of a guess form
-  - Identify themselves as the drawer in the Player Info card
-
-- **Guesser view** (`role === "guesser"`):
-  - Show "Guess the Word!" as the title
-  - Find the drawer's name from `room.participants` by matching `drawerParticipantId`
-  - Show "[Drawer name] is drawing" indicator
-  - Do NOT show the secret word
-  - Show the GuessForm component
-  - Show "Waiting for first guess..." prompt
-
-- **Both views**:
-  - Show the exit button
-  - Show the room code badge
-  - Keep Scoreboard and ResultPanel in the sidebar (they will be populated in spec 003)
-
-**Acceptance**:
-- [ ] Drawer sees the secret word displayed prominently
-- [ ] Drawer does not see the GuessForm
-- [ ] Guesser sees the drawer's name
-- [ ] Guesser does NOT see the secret word
-- [ ] Guesser sees the GuessForm
-- [ ] Player Info shows correct role label
+All user stories are independently complete. Only T006 (FR-013 error states) remains.
 
 ---
 
-## T004 Hide GuessForm for drawer
+## Implementation Strategy
 
-**File**: `frontend/src/pages/GamePage.tsx`
-
-**Description**: Pass `disabled` prop or conditionally render the GuessForm based on role. The drawer should not see a guess input.
-
-**Acceptance**:
-- [ ] GuessForm is rendered only when `role === "guesser"`
-- [ ] When `role === "drawer"`, the "Your Guess" card shows "You are drawing — no guessing needed" or similar text
-
----
-
-## T005 Run tests and verify
-
-**Description**: Run both backend and frontend test suites and TypeScript checks to confirm no regressions.
-
-**Acceptance**:
-- [ ] `cd backend && npm test && npx tsc --noEmit` passes
-- [ ] `cd frontend && npm test && npx tsc --noEmit` passes
-
----
-
-## T006 Add invalid-state error handling to GamePage (FR-013)
-
-**File**: `frontend/src/pages/GamePage.tsx`
-
-**Description**: Add distinct error states for invalid navigation to the game page:
-
-- **Bad room code** (`room` is null, no valid room loaded): redirect to `"/"` immediately
-- **Missing participantId** (`participantId` is null/undefined in store): show an error card with "You need to rejoin the game" message and a link to the join page
-- **Participant removed** (participantId not found in `room.participants`): show "You have left the game" message with a "Return to Home" button
-
-The bad-room-code redirect is already partially handled by the existing `if (!room) navigate("/")` guard — this task ensures the remaining two states have dedicated UI.
-
-**Acceptance**:
-- [ ] Bad room code redirects to "/"
-- [ ] Missing participantId shows error card with rejoin link
-- [ ] Removed participant shows "You have left the game" with "Return to Home" button
-- [ ] All error states are visually distinct from normal game UI
+1. Complete T006 in `frontend/src/pages/GamePage.tsx` — add missing participantId error card and removed-participant "You have left the game" state
+2. Run `cd frontend && npm test && npx tsc --noEmit` to verify no regressions
+3. Run `cd backend && npm test && npx tsc --noEmit` to verify backend unaffected
+4. Manual validation via quickstart.md scenarios
