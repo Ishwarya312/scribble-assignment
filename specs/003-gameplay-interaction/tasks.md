@@ -31,16 +31,16 @@ Project infrastructure is already in place from previous features.
 
 ### Implementation for Foundational Phase
 
-- [ ] T005 [P] Add `Point`, `Stroke`, `Guess` types to `backend/src/models/game.ts`
-- [ ] T006 Update `Room` and `RoomSnapshot` in `backend/src/models/game.ts` with `drawing`, `guessHistory`, `scores` fields per data-model.md
-- [ ] T007 [P] Add `guessSchema`, `drawSchema`, `clearSchema` to `backend/src/api/schemas.ts` per contract specs
-- [ ] T008 Implement `submitGuess` in `backend/src/services/roomStore.ts` (validate, compare case-insensitively, score, reject already-correct, reject drawer)
-- [ ] T009 Implement `addStroke` in `backend/src/services/roomStore.ts` (append stroke to room drawing, validate drawer role)
-- [ ] T010 Implement `clearDrawing` in `backend/src/services/roomStore.ts` (reset drawing to empty array, validate drawer role)
-- [ ] T011 Update `toRoomSnapshot` in `backend/src/services/roomStore.ts` to include `drawing`, `guessHistory`, `scores`
-- [ ] T012 [P] Add `POST /:code/guess`, `POST /:code/draw`, `POST /:code/clear` routes to `backend/src/api/rooms.ts`
-- [ ] T013 [P] Add `submitGuess`, `addStroke`, `clearCanvas` methods to `frontend/src/services/api.ts`
-- [ ] T014 Add `submitGuess` action to `frontend/src/state/roomStore.ts`
+- [x] T005 [P] Add `Point`, `Stroke`, `Guess` types to `backend/src/models/game.ts`
+- [x] T006 Update `Room` and `RoomSnapshot` in `backend/src/models/game.ts` with `drawing`, `guessHistory`, `scores` fields per data-model.md
+- [x] T007 [P] Add `guessSchema`, `drawSchema`, `clearSchema` to `backend/src/api/schemas.ts` per contract specs
+- [x] T008 Implement `submitGuess` in `backend/src/services/roomStore.ts` (validate, compare case-insensitively, score, reject already-correct, reject drawer)
+- [x] T009 Implement `addStroke` in `backend/src/services/roomStore.ts` (append stroke to room drawing, validate drawer role)
+- [x] T010 Implement `clearDrawing` in `backend/src/services/roomStore.ts` (reset drawing to empty array, validate drawer role)
+- [x] T011 Update `toRoomSnapshot` in `backend/src/services/roomStore.ts` to include `drawing`, `guessHistory`, `scores`
+- [x] T012 [P] Add `POST /:code/guess`, `POST /:code/draw`, `POST /:code/clear` routes to `backend/src/api/rooms.ts`
+- [x] T013 [P] Add `submitGuess`, `addStroke`, `clearCanvas` methods to `frontend/src/services/api.ts`
+- [x] T014 Add `submitGuess` action to `frontend/src/state/roomStore.ts`
 
 **Checkpoint**: Foundation ready — backend fully supports drawing, guessing, and clearing. Frontend has API methods and store action. User story implementation can begin.
 
@@ -59,9 +59,9 @@ Project infrastructure is already in place from previous features.
 
 ### Implementation for User Story 1
 
-- [ ] T017 [P] [US1] Create `DrawingCanvas` component in `frontend/src/components/DrawingCanvas.tsx` with mouse/touch event handling and Canvas API rendering
-- [ ] T018 [US1] Add clear button to DrawingCanvas that calls `api.clearCanvas` and resets local canvas
-- [ ] T019 [US1] Integrate DrawingCanvas into `frontend/src/pages/GamePage.tsx` — show interactive canvas for drawer, read-only canvas for guessers
+- [x] T017 [P] [US1] Create `DrawingCanvas` component in `frontend/src/components/DrawingCanvas.tsx` with mouse/touch event handling and Canvas API rendering
+- [x] T018 [US1] Add clear button to DrawingCanvas that calls `api.clearCanvas` and resets local canvas
+- [x] T019 [US1] Integrate DrawingCanvas into `frontend/src/pages/GamePage.tsx` — show interactive canvas for drawer, read-only canvas for guessers
 
 **Checkpoint**: Drawer can draw and clear. Guesser sees a canvas but cannot draw.
 
@@ -79,9 +79,9 @@ Project infrastructure is already in place from previous features.
 
 ### Implementation for User Story 2
 
-- [ ] T021 [P] [US2] Wire GuessForm submit handler to `roomStore.submitGuess` and display correct/incorrect feedback in `frontend/src/components/GuessForm.tsx`
-- [ ] T022 [US2] Disable GuessForm after correct guess and show "You guessed correctly!" message
-- [ ] T023 [US2] Show inline validation error for empty/whitespace guesses before submitting to API
+- [x] T021 [P] [US2] Wire GuessForm submit handler to `roomStore.submitGuess` and display correct/incorrect feedback in `frontend/src/components/GuessForm.tsx`
+- [x] T022 [US2] Disable GuessForm after correct guess and show "You guessed correctly!" message
+- [x] T023 [US2] Show inline validation error for empty/whitespace guesses before submitting to API
 
 **Checkpoint**: Guessers can guess, see feedback, and are blocked after correct answer.
 
@@ -99,9 +99,9 @@ Project infrastructure is already in place from previous features.
 
 ### Implementation for User Story 3
 
-- [ ] T025 [P] [US3] Wire DrawingCanvas to display snapshot `drawing` data for guessers (read-only mode) in `frontend/src/components/DrawingCanvas.tsx`
-- [ ] T026 [US3] Wire ResultPanel to display snapshot `guessHistory` in `frontend/src/components/ResultPanel.tsx` (participant name, guessed word, correct/incorrect indicator)
-- [ ] T027 [US3] Ensure polling in `frontend/src/pages/GamePage.tsx` picks up `drawing`, `guessHistory`, `scores` from snapshot and passes to child components
+- [x] T025 [P] [US3] Wire DrawingCanvas to display snapshot `drawing` data for guessers (read-only mode) in `frontend/src/components/DrawingCanvas.tsx`
+- [x] T026 [US3] Wire ResultPanel to display snapshot `guessHistory` in `frontend/src/components/ResultPanel.tsx` (participant name, guessed word, correct/incorrect indicator)
+- [x] T027 [US3] Ensure polling in `frontend/src/pages/GamePage.tsx` picks up `drawing`, `guessHistory`, `scores` from snapshot and passes to child components
 
 **Checkpoint**: Drawing and guess history sync to all participants within ~4s.
 
@@ -119,8 +119,8 @@ Project infrastructure is already in place from previous features.
 
 ### Implementation for User Story 4
 
-- [ ] T029 [US4] Wire Scoreboard to display snapshot `scores` in `frontend/src/components/Scoreboard.tsx` — list each participant with their score, sorted by score descending
-- [ ] T030 [US4] Show "0" for participants not yet in scores map
+- [x] T029 [US4] Wire Scoreboard to display snapshot `scores` in `frontend/src/components/Scoreboard.tsx` — list each participant with their score, sorted by score descending
+- [x] T030 [US4] Show "0" for participants not yet in scores map
 
 **Checkpoint**: All participants see live scores.
 
@@ -130,8 +130,8 @@ Project infrastructure is already in place from previous features.
 
 **Purpose**: Verify everything works together end-to-end.
 
-- [ ] T031 Run `cd backend && npm test && npx tsc --noEmit` — all tests pass, no type errors
-- [ ] T032 Run `cd frontend && npm test && npx tsc --noEmit` — all tests pass, no type errors
+- [x] T031 Run `cd backend && npm test && npx tsc --noEmit` — all tests pass, no type errors
+- [x] T032 Run `cd frontend && npm test && npx tsc --noEmit` — all tests pass, no type errors
 - [ ] T033 Manual validation via quickstart.md scenarios in two-browser setup
 
 ---
