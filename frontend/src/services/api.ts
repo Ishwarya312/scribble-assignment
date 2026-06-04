@@ -26,7 +26,7 @@ export interface Guess {
 
 export interface RoomSnapshot {
   code: string;
-  status: "lobby" | "playing";
+  status: "lobby" | "playing" | "finished";
   participants: Participant[];
   hostParticipantId: string;
   drawerParticipantId?: string;
@@ -123,6 +123,18 @@ export const api = {
   },
   clearCanvas(code: string, participantId: string) {
     return request<ClearResponse>(`/rooms/${encodeURIComponent(code)}/clear`, {
+      method: "POST",
+      body: JSON.stringify({ participantId })
+    });
+  },
+  endRound(code: string, participantId: string) {
+    return request<{ success: boolean }>(`/rooms/${encodeURIComponent(code)}/end-round`, {
+      method: "POST",
+      body: JSON.stringify({ participantId })
+    });
+  },
+  restartGame(code: string, participantId: string) {
+    return request<{ success: boolean }>(`/rooms/${encodeURIComponent(code)}/restart`, {
       method: "POST",
       body: JSON.stringify({ participantId })
     });

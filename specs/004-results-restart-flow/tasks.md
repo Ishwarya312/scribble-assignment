@@ -20,7 +20,7 @@
 
 **⚠️ No user story work can begin until this phase is complete**
 
-- [ ] T001 Add `"finished"` to `RoomStatus` union type in `backend/src/models/game.ts`
+- [x] T001 Add `"finished"` to `RoomStatus` union type in `backend/src/models/game.ts`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -34,20 +34,20 @@
 
 ### Backend — End Round Service & Route
 
-- [ ] T002 [P] [US1] Add `endRoundSchema` and `restartSchema` (participantId only) in `backend/src/api/schemas.ts`
-- [ ] T003 [US1] Implement `endRound` function in `backend/src/services/roomStore.ts` — validate host + playing status, set status to "finished"
-- [ ] T004 [US1] Update `toRoomSnapshot` in `backend/src/services/roomStore.ts` to expose `secretWord` to all participants when status is "finished"
-- [ ] T005 [US1] Add `POST /:code/end-round` route in `backend/src/api/rooms.ts`
+- [x] T002 [P] [US1] Add `endRoundSchema` and `restartSchema` (participantId only) in `backend/src/api/schemas.ts`
+- [x] T003 [US1] Implement `endRound` function in `backend/src/services/roomStore.ts` — validate host + playing status, set status to "finished"
+- [x] T004 [US1] Update `toRoomSnapshot` in `backend/src/services/roomStore.ts` to expose `secretWord` to all participants when status is "finished"
+- [x] T005 [US1] Add `POST /:code/end-round` route in `backend/src/api/rooms.ts`
 
 ### Frontend — End Round API & Store
 
-- [ ] T006 [P] [US1] Add `endRound(code, participantId)` method to `frontend/src/services/api.ts`
-- [ ] T007 [US1] Add `endRound` action to `frontend/src/state/roomStore.ts` — call API, update snapshot status to "finished"
+- [x] T006 [P] [US1] Add `endRound(code, participantId)` method to `frontend/src/services/api.ts`
+- [x] T007 [US1] Add `endRound` action to `frontend/src/state/roomStore.ts` — call API, update snapshot status to "finished"
 
 ### Frontend — Results View & GamePage
 
-- [ ] T008 [P] [US1] Add "End Round" button to `frontend/src/pages/GamePage.tsx` — host-only, visible when status is "playing"
-- [ ] T009 [US1] Add results section to `frontend/src/pages/GamePage.tsx` — rendered when `status === "finished"`, shows correct word, final scores, full guess history, and the drawing. All the data already exists in the snapshot.
+- [x] T008 [P] [US1] Add "End Round" button to `frontend/src/pages/GamePage.tsx` — host-only, visible when status is "playing"
+- [x] T009 [US1] Add results section to `frontend/src/pages/GamePage.tsx` — rendered when `status === "finished"`, shows correct word, final scores, full guess history, and the drawing. All the data already exists in the snapshot.
 
 **Checkpoint**: US1 complete — host can end a round and see results. Non-host sees results via polling. Both tabs show the correct word.
 
@@ -61,17 +61,17 @@
 
 ### Backend — Restart Service & Route
 
-- [ ] T010 [US2] Implement `restartGame` function in `backend/src/services/roomStore.ts` — validate host + finished status, clear all round state (scores, guessHistory, drawing, secretWord, drawerParticipantId), set status to "lobby"
-- [ ] T011 [US2] Add `POST /:code/restart` route in `backend/src/api/rooms.ts`
+- [x] T010 [US2] Implement `restartGame` function in `backend/src/services/roomStore.ts` — validate host + finished status, clear all round state (scores, guessHistory, drawing, secretWord, drawerParticipantId), set status to "lobby"
+- [x] T011 [US2] Add `POST /:code/restart` route in `backend/src/api/rooms.ts`
 
 ### Frontend — Restart API & Store
 
-- [ ] T012 [P] [US2] Add `restartGame(code, participantId)` method to `frontend/src/services/api.ts`
-- [ ] T013 [US2] Add `restartGame` action to `frontend/src/state/roomStore.ts` — call API, update snapshot status to "lobby", clear local round state to match server
+- [x] T012 [P] [US2] Add `restartGame(code, participantId)` method to `frontend/src/services/api.ts`
+- [x] T013 [US2] Add `restartGame` action to `frontend/src/state/roomStore.ts` — call API, update snapshot status to "lobby", clear local round state to match server
 
 ### Frontend — Restart Button
 
-- [ ] T014 [US2] Add "Restart" button to results section in `frontend/src/pages/GamePage.tsx` — host-only, visible when status is "finished". Non-host sees "Waiting for host..." message.
+- [x] T014 [US2] Add "Restart" button to results section in `frontend/src/pages/GamePage.tsx` — host-only, visible when status is "finished". Non-host sees "Waiting for host..." message.
 
 **Checkpoint**: US2 complete — host can restart and all participants return to lobby with preserved players and cleared state.
 
@@ -87,7 +87,7 @@
 
 > The polling loop already exists in `GamePage.tsx`. The status-driven rendering is partially built in US1 and US2. This phase ensures the full cycle works.
 
-- [ ] T015 [US3] Ensure GamePage + roomStore handle the full status cycle via polling — lobby → playing → finished → lobby. Verify that:
+- [x] T015 [US3] Ensure GamePage + roomStore handle the full status cycle via polling — lobby → playing → finished → lobby. Verify that:
   - When poll returns `status === "lobby"`: GamePage redirects to lobby or renders lobby content (existing behavior via react-router)
   - When poll returns `status === "finished"`: GamePage renders the results section (from T009)
   - Error during poll (T015a) shows non-blocking inline error, keeps last good data
@@ -100,9 +100,9 @@
 
 **Purpose**: Edge case handling, error states, and final validation
 
-- [ ] T016 [P] Add idempotency guards in roomStore.ts — endRound returns error if not "playing"; restartGame returns error if not "finished"
-- [ ] T017 [P] Add inline error handling in GamePage.tsx for end-round and restart API failures — show non-blocking inline error message, keep button clickable for retry
-- [ ] T018 Run full validation using `specs/004-results-restart-flow/quickstart.md` — verify all scenarios pass
+- [x] T016 [P] Add idempotency guards in roomStore.ts — endRound returns error if not "playing"; restartGame returns error if not "finished"
+- [x] T017 [P] Add inline error handling in GamePage.tsx for end-round and restart API failures — show non-blocking inline error message, keep button clickable for retry
+- [x] T018 Run full validation using `specs/004-results-restart-flow/quickstart.md` — verify all scenarios pass
 
 ---
 

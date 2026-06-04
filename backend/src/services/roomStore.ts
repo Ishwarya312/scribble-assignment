@@ -257,6 +257,63 @@ export function clearDrawing(code: string, participantId: string): ClearResult {
   return { drawing: [] };
 }
 
+type EndRoundResult =
+  | { error: string }
+  | { success: true };
+
+export function endRound(code: string, participantId: string): EndRoundResult {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return { error: "Room not found" };
+  }
+
+  if (room.status !== "playing") {
+    return { error: "Round is not in progress" };
+  }
+
+  if (room.hostParticipantId !== participantId) {
+    return { error: "Only the host can end the round" };
+  }
+
+  room.status = "finished";
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return { success: true };
+}
+
+type RestartResult =
+  | { error: string }
+  | { success: true };
+
+export function restartGame(code: string, participantId: string): RestartResult {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return { error: "Room not found" };
+  }
+
+  if (room.status !== "finished") {
+    return { error: "Game is not in a finished state" };
+  }
+
+  if (room.hostParticipantId !== participantId) {
+    return { error: "Only the host can restart the game" };
+  }
+
+  room.status = "lobby";
+  room.drawerParticipantId = undefined;
+  room.secretWord = undefined;
+  room.drawing = [];
+  room.guessHistory = [];
+  room.scores = {};
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return { success: true };
+}
+
 export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
   const snapshot: RoomSnapshot = {
     code: room.code,
@@ -270,16 +327,20 @@ export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSn
     roles: [...STARTER_ROLES]
   };
 
-  if (room.status === "playing" && room.drawerParticipantId) {
+  if (room.drawerParticipantId) {
     snapshot.drawerParticipantId = room.drawerParticipantId;
 
     if (viewerParticipantId) {
       snapshot.role = viewerParticipantId === room.drawerParticipantId ? "drawer" : "guesser";
     }
+  }
 
-    if (viewerParticipantId === room.drawerParticipantId && room.secretWord) {
-      snapshot.secretWord = room.secretWord;
-    }
+  if (room.status === "playing" && viewerParticipantId === room.drawerParticipantId && room.secretWord) {
+    snapshot.secretWord = room.secretWord;
+  }
+
+  if (room.status === "finished" && room.secretWord) {
+    snapshot.secretWord = room.secretWord;
   }
 
   return snapshot;

@@ -3,15 +3,17 @@ import {
   clearSchema,
   createRoomSchema,
   drawSchema,
+  endRoundSchema,
   guessSchema,
   HttpError,
   joinRoomSchema,
   leaveRoomSchema,
+  restartSchema,
   roomCodeParamsSchema,
   roomViewerQuerySchema,
   startGameSchema
 } from "./schemas.js";
-import { addStroke, clearDrawing, createRoom, getRoom, joinRoom, removeParticipant, startGame, submitGuess, toRoomSnapshot } from "../services/roomStore.js";
+import { addStroke, clearDrawing, createRoom, endRound, getRoom, joinRoom, removeParticipant, restartGame, startGame, submitGuess, toRoomSnapshot } from "../services/roomStore.js";
 
 export function createRoomsRouter() {
   const router = Router();
@@ -136,6 +138,38 @@ export function createRoomsRouter() {
       response.json({
         drawing: result.drawing
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:code/end-round", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = endRoundSchema.parse(request.body);
+      const result = endRound(code.toUpperCase(), participantId);
+
+      if ("error" in result) {
+        throw new HttpError(400, result.error);
+      }
+
+      response.json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:code/restart", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = restartSchema.parse(request.body);
+      const result = restartGame(code.toUpperCase(), participantId);
+
+      if ("error" in result) {
+        throw new HttpError(400, result.error);
+      }
+
+      response.json({ success: true });
     } catch (error) {
       next(error);
     }
