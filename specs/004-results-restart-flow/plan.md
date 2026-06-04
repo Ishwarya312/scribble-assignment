@@ -1,113 +1,91 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Results and Restart Flow
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Branch**: `004-results-restart-flow` | **Date**: 2026-06-04 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Input**: Feature specification from `specs/004-results-restart-flow/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Add a "finished" room status so the host can end a round, showing all participants the correct word, final scores, guess history, and drawing. Then allow the host to restart the game, clearing round state and returning everyone to the lobby with participants preserved. Non-host participants see both transitions via existing 2s polling. Results view is rendered in-page within GamePage (no new route).
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: TypeScript 5.6
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
+**Primary Dependencies**: Express (backend), React 18 + Vite (frontend), Zod (validation)
 
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+**Storage**: In-memory `Map<string, Room>` — no database
 
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+**Testing**: vitest in both packages
 
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
+**Target Platform**: Node.js (backend), modern browsers via Vite (frontend)
 
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: Web application (Express API + React SPA)
 
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
+**Performance Goals**: Existing 2s polling, no new latency-sensitive paths
 
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
+**Constraints**: No WebSockets, no database, no authentication, no new state libs
 
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
-
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Scale/Scope**: Single-round game; one room with 2-8 participants
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+| Principle | Status | Notes |
+|-----------|--------|-------|
+| I. Spec-First Development | ✅ | Spec created in prior session, clarified in previous step |
+| II. Deterministic Game Logic | ✅ | No new game mechanics; end/restart are straightforward state transitions |
+| III. Test-Before-Implement | ✅ | Tests will be written before implementation per workflow |
+| IV. Brownfield Respect | ✅ | Extending existing types/routes/store; no rewrites or new deps |
+| V. Incremental Delivery | ✅ | Can commit in slices: types → services → routes → store → UI |
+| Technical Constraints | ✅ | No WebSockets, DB, auth, or new state libs used |
+
+No violations. All principles satisfied.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+specs/004-results-restart-flow/
+├── plan.md              # This file
+├── research.md          # Phase 0 — unknowns resolved
+├── data-model.md        # Phase 1 — state transitions & contracts
+├── quickstart.md        # Phase 1 — validation scenarios
+├── contracts/           # Phase 1 — API contracts
+│   ├── end-round.md
+│   └── restart.md
+└── tasks.md             # Phase 2 — created by /speckit.tasks
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
 ├── src/
 │   ├── models/
+│   │   └── game.ts          # ADD "finished" to RoomStatus
 │   ├── services/
-│   └── api/
-└── tests/
+│   │   └── roomStore.ts     # ADD endRound, restartGame, update toRoomSnapshot
+│   ├── api/
+│   │   ├── rooms.ts         # ADD POST /:code/end-round, POST /:code/restart
+│   │   └── schemas.ts       # ADD endRoundSchema, restartSchema
+│   └── seed/
+│       └── starterData.ts   # (no changes needed)
 
 frontend/
 ├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+│   ├── services/
+│   │   └── api.ts           # ADD endRound, restartGame methods
+│   ├── state/
+│   │   └── roomStore.ts     # ADD endRound, restartGame actions + status handling
+│   └── pages/
+│       └── GamePage.tsx      # ADD End Round button, results section, Restart button
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Web application (Option 2) — using existing backend/ + frontend/ layout. No structural changes.
 
 ## Complexity Tracking
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
-
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+> No constitution violations to justify. Table omitted.
