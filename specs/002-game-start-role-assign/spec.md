@@ -15,6 +15,7 @@
 - Q: SC-001 says "within 2 seconds" for all participants seeing the game page, but the polling interval is ~2s so non-hosts can take up to ~4s. Should SC-001 be updated? → A: Yes, update SC-001 to "within ~4 seconds" to match the polling behavior described in the spec.
 - Q: What should the GamePage display during its initial loading state before the first poll completes? → A: Show a generic loading state ("Loading game...") until the first poll returns role-specific content.
 - Q: The start endpoint and snapshot contextualization (drawerParticipantId, role, secretWord visibility) were already implemented during the lobby feature. Does this spec describe new work or existing behavior? → A: This spec serves as the acceptance contract. Already-implemented FRs (FR-001 through FR-010) are considered done. New work focuses on GamePage rendering, game-page polling, and role-aware UI.
+- Q: What should the GamePage do when a participant navigates to /game with invalid or missing state (bad room code, missing participantId, participant not in room list)? → A: Each case has distinct treatment: bad room code redirects to "/"; missing participantId shows an error card on the game page prompting rejoin; participant not found in room list (e.g., removed) shows a "You have left the game" message with a "Return to Home" button.
 
 ## User Scenarios & Testing
 
@@ -78,6 +79,9 @@ Once the game starts, all participants' game pages automatically poll the room s
 - **Rapid start requests**: If the start endpoint is called multiple times in rapid succession, only the first call succeeds; subsequent calls return an error (game already started).
 - **Network failure during game-page polling**: If a poll request fails, the game page should show a non-blocking error indicator and continue polling. The page should not crash.
 - **Participant re-fetches after game starts**: A participant who refreshes their browser after the game starts should receive the correct game state (including their role and the secret word if they are the drawer) from the API.
+- **Invalid room code on game page**: If a participant navigates to /game with a room code that does not exist, they are redirected to "/" immediately.
+- **Missing participantId on game page**: If a participant arrives at /game without a participantId in the store, an error card is shown indicating they need to rejoin, with a link to the join form.
+- **Participant not found in room on game page**: If the participantId exists but is not in the room's participant list (e.g., removed via leave endpoint), a "You have left the game" message is displayed with a "Return to Home" button.
 
 ## Requirements
 
@@ -95,6 +99,7 @@ Once the game starts, all participants' game pages automatically poll the room s
 - **FR-010**: The room snapshot returned to a viewer identified as a guesser MUST NOT include the `secretWord` field (it must be absent, null, or undefined — never the actual word).
 - **FR-011**: The game page frontend MUST poll the room snapshot endpoint every ~2 seconds while the page is active.
 - **FR-012**: Polling MUST stop when the user navigates away from the game page.
+- **FR-013**: The game page MUST handle invalid state gracefully: bad room code redirects to "/"; missing participantId shows an error card prompting rejoin; participant not in the participant list shows a "You have left the game" message with a "Return to Home" button.
 
 ### Key Entities
 
