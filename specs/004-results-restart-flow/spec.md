@@ -68,6 +68,7 @@ When the host ends the round or restarts the game, non-host participants see the
 - **All guessers guessed correctly**: If all guessers have already guessed correctly, the host can still end the round normally (no auto-end). The results view shows all guessers with 100 points.
 - **No one guessed correctly**: The results view shows the correct word and all guessers with 0 points. The guess history shows all incorrect attempts.
 - **Host polls during results**: The host's page also polls and transitions seamlessly — no special host behavior needed beyond the ability to trigger end/restart.
+- **End-round or restart API call fails**: Show an inline non-blocking error message near the action button. The button remains clickable so the host can retry immediately. No auto-retry or cooldown.
 - **Rapid end-then-restart**: The host can end the round and immediately restart. Both operations complete sequentially.
 - **Network failure during result fetch**: If a poll fails during the results view, the page shows a non-blocking error and continues polling. The results data remains displayed from the last successful fetch.
 
@@ -93,7 +94,7 @@ When the host ends the round or restarts the game, non-host participants see the
 
 ### Key Entities
 
-- **Result**: A read-only projection of the completed round. Contains the correct word (visible to all), final scores (participant → score map), and guess history (ordered list of guesses). Exposed through the room snapshot when status is "finished".
+- **Result**: A read-only projection of the completed round. Contains the correct word (visible to all), final scores (participant → score map), guess history (ordered list of guesses), and the final drawing. Exposed through the room snapshot when status is "finished".
 - **Room**: Gains a "finished" status value. Round-sensitive fields (secretWord, drawerParticipantId, drawing, guessHistory, scores) are cleared on restart.
 
 ## Success Criteria
@@ -123,8 +124,8 @@ When the host ends the round or restarts the game, non-host participants see the
 
 | File | Current State | Required Changes |
 |---|---|---|
-| `frontend/src/pages/GamePage.tsx` | Game view with canvas, guess form, scoreboard, guess history from prior specs. | Add "End Round" button visible only to host when status is "playing". Listen for status transition to "finished" and redirect to result view. |
-| `frontend/src/pages/ResultPage.tsx` (new or merged) | No result view exists. | Display correct word, final scores, and full guess history. Show "Restart" button visible only to host. Show "Waiting for host..." message to non-hosts. |
+| `frontend/src/pages/GamePage.tsx` | Game view with canvas, guess form, scoreboard, guess history from prior specs. | Add "End Round" button visible only to host when status is "playing". React to status transition to "finished" by rendering the results section in-page. Show inline error near button on API failure. |
+| `frontend/src/pages/GamePage.tsx` (results section) | No result view exists. | Add an in-page results section rendered when `snapshot.status === "finished"`. Display correct word, final scores, and full guess history. Show "Restart" button visible only to host. Show "Waiting for host..." message to non-hosts. |
 | `frontend/src/pages/LobbyPage.tsx` | Lobby from prior specs. | No changes needed — lobby already handles polling and start-game flow. Participants already in the list will see the lobby as normal after restart. |
 | `frontend/src/state/roomStore.ts` | State includes game fields from prior specs. | Add handling for "finished" status. Add `endRound` action. Add `restartGame` action. Add result data fields (correctWord visible to all when finished). Route to appropriate page based on status. |
 | `frontend/src/services/api.ts` | Methods from prior specs. | Add `endRound(code, participantId)`. Add `restartGame(code, participantId)`. |
@@ -139,10 +140,18 @@ When the host ends the round or restarts the game, non-host participants see the
 | Result view | Correct word visible to all; scores and guess history displayed; host sees Restart button; non-host sees "Waiting for host" |
 | Integration | Two-browser end-to-end flow: host ends round → all see results → host restarts → all return to lobby with preserved players and cleared state |
 
+## Clarifications
+
+### Session 2026-06-04
+
+- Q: Should the results view be a separate route or an in-page conditional within GamePage? → A: In-page conditional. GamePage renders a results section when `snapshot.status === "finished"`, avoiding a new route and keeping polling in place without duplication.
+- Q: Should the drawing canvas persist and be visible in the results view? → A: Yes, the drawing stays visible alongside scores and guess history.
+- Q: How should the UI handle errors when end-round or restart API calls fail (network error, server error)? → A: Show an inline non-blocking error message near the action button; keep the button clickable for immediate retry.
+
 ## Assumptions
 
 - **Round end trigger**: The host manually ends the round by clicking an "End Round" button while the game is in progress. There is no automatic end condition (all-guessed, timer, etc.).
-- **Result view**: The result information is part of the same page or a route change triggered by room status. The frontend reacts to the status change in the polled snapshot.
+- **Result view**: The result information is rendered in-page within GamePage when `snapshot.status === "finished"`. No separate route is used.
 - **Non-host experience during results**: Non-host participants see a results view with all the data but no action controls (no "End Round", no "Restart"). They see a message like "Waiting for host..." for the restart action.
 - **Restart returns to lobby**: After restart, participants see the same lobby page they saw before the game started. All lobby features (polling, participant list, host controls) work as before.
 - **Player identity preserved**: Participant IDs and names are unchanged through restart. The host remains the host. No re-joining is needed.
