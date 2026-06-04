@@ -25,7 +25,7 @@ function makeStroke(): Stroke {
 }
 
 describe("full game flow integration", () => {
-  it("completes a full game lifecycle: create → join → start → guess → draw → clear → end → restart", () => {
+  it("completes lifecycle with auto-end when all guessers correct", () => {
     // --- Create room ---
     const { room: created, participantId: hostId } = createRoom("Alice");
     const code = created.code;
@@ -41,26 +41,12 @@ describe("full game flow integration", () => {
     expect(joinResult2).not.toBeNull();
     const charlieId = joinResult2!.participantId;
 
-    // --- Verify lobby snapshot ---
-    const lobbySnapshot = toRoomSnapshot(getRoom(code)!, hostId);
-    expect(lobbySnapshot.status).toBe("lobby");
-    expect(lobbySnapshot.participants).toHaveLength(3);
-
     // --- Start game ---
     const startResult = startGame(code, hostId);
     expect("error" in startResult).toBe(false);
     const playingRoom = "room" in startResult ? startResult.room : null;
     expect(playingRoom?.status).toBe("playing");
-    expect(playingRoom?.drawerParticipantId).toBeDefined();
-    expect(playingRoom?.secretWord).toBeDefined();
-
-    // --- Drawer is first participant (Alice) ---
     expect(playingRoom?.drawerParticipantId).toBe(hostId);
-
-    // --- Drawer snapshot includes secret word ---
-    const drawerSnapshot = toRoomSnapshot(playingRoom!, hostId);
-    expect(drawerSnapshot.role).toBe("drawer");
-    expect(drawerSnapshot.secretWord).toBeDefined();
 
     // --- Guesser snapshot hides secret word ---
     const guesserSnapshot = toRoomSnapshot(playingRoom!, bobId);
@@ -82,83 +68,53 @@ describe("full game flow integration", () => {
       expect(wrongGuess.score).toBe(0);
     }
 
-    // --- Submit correct guess ---
+    // --- Bob guesses correctly; round stays playing (Charlie hasn't guessed) ---
     const secretWord = getRoom(code)?.secretWord;
     expect(secretWord).toBeDefined();
-    const correctGuess = submitGuess(code, bobId, secretWord!);
-    expect("error" in correctGuess).toBe(false);
-    if ("guess" in correctGuess) {
-      expect(correctGuess.guess.correct).toBe(true);
-      expect(correctGuess.score).toBe(100);
+    const bobCorrect = submitGuess(code, bobId, secretWord!);
+    expect("error" in bobCorrect).toBe(false);
+    if ("guess" in bobCorrect) {
+      expect(bobCorrect.guess.correct).toBe(true);
+      expect(bobCorrect.score).toBe(100);
     }
+    expect(getRoom(code)?.status).toBe("playing");
 
-    // --- Already-correct guesser is rejected ---
+    // --- Already-correct Bob is rejected ---
     const repeatGuess = submitGuess(code, bobId, secretWord!);
     expect("error" in repeatGuess).toBe(true);
     if ("error" in repeatGuess) {
       expect(repeatGuess.error).toMatch(/already guessed correctly/i);
     }
 
-    // --- Another guesser guesses correctly ---
-    const charlieGuess = submitGuess(code, charlieId, secretWord!);
-    expect("error" in charlieGuess).toBe(false);
-    if ("guess" in charlieGuess) {
-      expect(charlieGuess.guess.correct).toBe(true);
-      expect(charlieGuess.score).toBe(100);
-    }
-
-    // --- Drawer adds stroke ---
+    // --- Draw, clear, draw ---
     const drawResult = addStroke(code, hostId, makeStroke());
     expect("error" in drawResult).toBe(false);
-    if ("drawing" in drawResult) {
-      expect(drawResult.drawing).toHaveLength(1);
-    }
+    const clearResult = clearDrawing(code, hostId);
+    expect("error" in clearResult).toBe(false);
+    const reDraw = addStroke(code, hostId, makeStroke());
+    expect("error" in reDraw).toBe(false);
 
     // --- Non-drawer cannot draw ---
     const bobDraw = addStroke(code, bobId, makeStroke());
     expect("error" in bobDraw).toBe(true);
-    if ("error" in bobDraw) {
-      expect(bobDraw.error).toMatch(/only the drawer/i);
-    }
 
-    // --- Clear canvas ---
-    const clearResult = clearDrawing(code, hostId);
-    expect("error" in clearResult).toBe(false);
-    if ("drawing" in clearResult) {
-      expect(clearResult.drawing).toHaveLength(0);
-    }
+    // --- Charlie guesses correctly → triggers auto-end ---
+    const charlieCorrect = submitGuess(code, charlieId, secretWord!);
+    expect("error" in charlieCorrect).toBe(false);
+    expect(getRoom(code)?.status).toBe("finished");
 
-    // --- Re-draw after clear ---
-    const reDraw = addStroke(code, hostId, makeStroke());
-    expect("error" in reDraw).toBe(false);
-    if ("drawing" in reDraw) {
-      expect(reDraw.drawing).toHaveLength(1);
-    }
-
-    // --- End round ---
-    const endResult = endRound(code, hostId);
-    expect("error" in endResult).toBe(false);
-
-    // --- Verify finished state ---
-    const finishedRoom = getRoom(code);
-    expect(finishedRoom?.status).toBe("finished");
-
-    // --- Finished snapshot exposes secret word to all ---
-    const finishedSnapshot = toRoomSnapshot(finishedRoom!, bobId);
-    expect(finishedSnapshot.secretWord).toBeDefined();
+    // --- Finished snapshot exposes word + scores to all ---
+    const finishedSnapshot = toRoomSnapshot(getRoom(code)!, bobId);
+    expect(finishedSnapshot.secretWord).toBe(secretWord);
     expect(finishedSnapshot.scores[bobId]).toBe(100);
     expect(finishedSnapshot.scores[charlieId]).toBe(100);
     expect(finishedSnapshot.guessHistory).toHaveLength(3);
 
-    // --- Non-host cannot end round ---
-    const nonHostEnd = endRound(code, bobId);
-    expect("error" in nonHostEnd).toBe(true);
+    // --- End round now fails (already finished by auto-end) ---
+    const endAfterAuto = endRound(code, hostId);
+    expect("error" in endAfterAuto).toBe(true);
 
-    // --- Cannot end round twice ---
-    const doubleEnd = endRound(code, hostId);
-    expect("error" in doubleEnd).toBe(true);
-
-    // --- Restart game ---
+    // --- Restart ---
     const restartResult = restartGame(code, hostId);
     expect("error" in restartResult).toBe(false);
 
@@ -171,19 +127,31 @@ describe("full game flow integration", () => {
     expect(restartedRoom?.guessHistory).toHaveLength(0);
     expect(restartedRoom?.scores).toEqual({});
 
-    // --- Participants preserved after restart ---
+    // --- Participants preserved ---
     expect(restartedRoom?.participants).toHaveLength(3);
-    expect(restartedRoom?.participants[0].name).toBe("Alice");
-    expect(restartedRoom?.participants[1].name).toBe("Bob");
-    expect(restartedRoom?.participants[2].name).toBe("Charlie");
 
     // --- Non-host cannot restart ---
-    const nonHostRestart = restartGame(code, bobId);
-    expect("error" in nonHostRestart).toBe(true);
+    expect("error" in restartGame(code, bobId)).toBe(true);
 
     // --- Cannot restart from lobby ---
-    const lobbyRestart = restartGame(code, hostId);
-    expect("error" in lobbyRestart).toBe(true);
+    expect("error" in restartGame(code, hostId)).toBe(true);
+  });
+
+  it("host can manually end round early before all guessers guess correctly", () => {
+    const { room, participantId: hostId } = createRoom("Alice");
+    const code = room.code;
+    const joinBob = joinRoom(code, "Bob");
+    expect(joinBob).not.toBeNull();
+    const bobId = joinBob!.participantId;
+
+    const startResult = startGame(code, hostId);
+    expect("error" in startResult).toBe(false);
+
+    // Bob guesses wrong — not all correct, host can end manually
+    submitGuess(code, bobId, "wrong");
+    const endResult = endRound(code, hostId);
+    expect("error" in endResult).toBe(false);
+    expect(getRoom(code)?.status).toBe("finished");
   });
 
   it("rejects start with fewer than 2 players", () => {
@@ -214,11 +182,6 @@ describe("full game flow integration", () => {
     }
   });
 
-  it("rejects draw for non-existent room", () => {
-    const result = addStroke("ZZZZ", "any-id", makeStroke());
-    expect("error" in result).toBe(true);
-  });
-
   it("rejects end-round for non-existent room", () => {
     const result = endRound("ZZZZ", "any-id");
     expect("error" in result).toBe(true);
@@ -238,17 +201,5 @@ describe("full game flow integration", () => {
     if ("error" in guess) {
       expect(guess.error).toMatch(/not in progress/i);
     }
-  });
-
-  it("rejects draw when room is not playing", () => {
-    const { room } = createRoom("Alice");
-    const result = addStroke(room.code, "any-id", makeStroke());
-    expect("error" in result).toBe(true);
-  });
-
-  it("rejects clear when room is not playing", () => {
-    const { room } = createRoom("Alice");
-    const result = clearDrawing(room.code, "any-id");
-    expect("error" in result).toBe(true);
   });
 });

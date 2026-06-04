@@ -196,6 +196,14 @@ export function submitGuess(code: string, participantId: string, word: string): 
 
   if (correct) {
     room.scores[participantId] = (room.scores[participantId] ?? 0) + 100;
+
+    const allCorrect = room.participants
+      .filter((p) => p.id !== room.drawerParticipantId)
+      .every((p) => room.guessHistory.some((g) => g.participantId === p.id && g.correct));
+
+    if (allCorrect) {
+      room.status = "finished";
+    }
   }
 
   room.updatedAt = now();
