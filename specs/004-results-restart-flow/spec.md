@@ -65,7 +65,7 @@ When the host ends the round or restarts the game, non-host participants see the
 - **Restart when in "playing" state**: Restart is not allowed while the game is in progress. The round must be ended first.
 - **Participant joins during results**: A participant who joins (or re-joins via fetch) during the results view sees the same result data as everyone else (correct word, scores, history).
 - **Participant joins after restart**: A participant who joins after restart sees the lobby with the existing participants and scores at 0.
-- **All guessers guessed correctly**: If all guessers have already guessed correctly, the host can still end the round normally (no auto-end). The results view shows all guessers with 100 points.
+- **All guessers guessed correctly, round does NOT auto-end**: Even when every guesser has guessed correctly, the round does not automatically end. The host must still click "End Round" to transition to results. This is by design — it lets the round continue socially (e.g., the drawer can keep drawing, guessers can admire). The results view shows all guessers with 100 points.
 - **No one guessed correctly**: The results view shows the correct word and all guessers with 0 points. The guess history shows all incorrect attempts.
 - **Host polls during results**: The host's page also polls and transitions seamlessly — no special host behavior needed beyond the ability to trigger end/restart.
 - **End-round or restart API call fails**: Show an inline non-blocking error message near the action button. The button remains clickable so the host can retry immediately. No auto-retry or cooldown.
@@ -110,6 +110,8 @@ When the host ends the round or restarts the game, non-host participants see the
 - **SC-007**: All participants remain in the room after restart, verified by checking the participant list before and after restart.
 
 ## Discovery Notes & Relevant Files
+
+📄 Full cross-feature discovery notes (gaps, risks, edge cases, assumptions, architecture): [`../discovery-notes.md`](../discovery-notes.md)
 
 ### Backend
 

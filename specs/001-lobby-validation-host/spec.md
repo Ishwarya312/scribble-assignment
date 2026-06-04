@@ -129,6 +129,8 @@ Once at least 2 players are present in the lobby, the host can start the game by
 
 ## Discovery Notes & Relevant Files
 
+📄 Full cross-feature discovery notes (gaps, risks, edge cases, assumptions, architecture): [`../discovery-notes.md`](../discovery-notes.md)
+
 ### Backend
 
 | File | Current State | Required Changes |

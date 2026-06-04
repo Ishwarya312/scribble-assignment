@@ -89,6 +89,7 @@ All participants can see the current scores for every player. Scores update in r
 - **Drawing while another guesser submits a guess**: These operations are independent. Drawing is not interrupted by guess submission.
 - **Network error during drawing sync**: If a drawing stroke fails to sync, the drawer's local canvas still shows the stroke. The stroke will be re-attempted on the next poll cycle or the drawer can redraw.
 - **Polling failure on game page**: If poll requests fail, the game page shows a non-blocking error indicator and continues polling. Drawing and guess submission still work (they have their own API calls independent of polling).
+- **Round does not auto-end on correct guess**: Even when all guessers have submitted the correct word, the round stays in `"playing"` state. Ending the round is exclusively the host's manual action via the End Round button (feature 004). This is by design so the round can run for a fixed social duration.
 
 ## Requirements
 
@@ -134,6 +135,8 @@ All participants can see the current scores for every player. Scores update in r
 
 ## Discovery Notes & Relevant Files
 
+📄 Full cross-feature discovery notes (gaps, risks, edge cases, assumptions, architecture): [`../discovery-notes.md`](../discovery-notes.md)
+
 ### Backend
 
 | File | Current State | Required Changes |
@@ -174,4 +177,5 @@ All participants can see the current scores for every player. Scores update in r
 - **Already-correct guesser**: A participant who has submitted the correct word is considered "done" and cannot submit further guesses. They can still view the drawing, guess history, and scores.
 - **Drawer guess rejection**: The drawer role is prevented from submitting guesses both by UI (no guess form) and by backend validation.
 - **Polling behavior**: Game page polling follows the same pattern as lobby polling (~2s interval, stops on unmount, error resilience with non-blocking indicator).
+- **Round lifecycle is separate**: Round-ending (transition from `"playing"` to `"finished"`) is **not** part of this feature. It is handled by feature 004 via a **manual host action** (End Round button). There is no automatic end condition triggered by correct guesses. The "playing" state persists until the host explicitly ends the round.
 - **Single round**: All gameplay occurs within a single round. There is no round advancement, drawer rotation, or game-end mechanism in this feature. Those are separate features.

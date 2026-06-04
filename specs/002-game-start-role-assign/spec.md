@@ -119,6 +119,8 @@ Once the game starts, all participants' game pages automatically poll the room s
 
 ## Discovery Notes & Relevant Files
 
+📄 Full cross-feature discovery notes (gaps, risks, edge cases, assumptions, architecture): [`../discovery-notes.md`](../discovery-notes.md)
+
 ### Backend
 
 | File | Current State | Required Changes |
